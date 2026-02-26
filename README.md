@@ -101,4 +101,4 @@ gh api -X PUT repos/<OWNER>/<REPO>/pages -f source[branch]=main -f source[path]=
 
 ## Live URL
 
-- GitHub Pages URL: _to be filled after deploy_
+- GitHub Pages URL: https://atomlinsonc.github.io/NBAowner/
