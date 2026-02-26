@@ -3,37 +3,983 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cognitive Bias Arcade | Tomlinson psychology</title>
-  <link rel="stylesheet" href="assets/style.css" />
+  <title>GM Season Simulator</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --text: #11203b;
+      --muted: #4e5f7e;
+      --primary: #1b5cff;
+      --primary-dark: #1343bc;
+      --accent: #ffb020;
+      --success: #10893e;
+      --danger: #b42318;
+      --border: #d9e1f0;
+      --shadow: 0 10px 24px rgba(16, 32, 70, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at 0% 0%, #ffffff 0%, var(--bg) 65%);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    .hud {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: rgba(244, 246, 251, 0.93);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(3px);
+      margin-bottom: 14px;
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      background: #eaf0ff;
+      border: 1px solid #ccdbff;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+    }
+
+    .dot {
+      height: 12px;
+      border-radius: 8px;
+      background: #cfd7e7;
+      border: 1px solid #bac5dc;
+      transition: transform 140ms ease, background 140ms ease;
+    }
+
+    .dot.done { background: var(--success); border-color: #0b6f31; }
+    .dot.current { background: var(--accent); border-color: #d28800; transform: scale(1.05); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    h1, h2, h3 { margin: 0 0 10px; }
+
+    p {
+      margin: 8px 0;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .title {
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .contract-box {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #d2dbef;
+      background: #f6f9ff;
+    }
+
+    .btn-row {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 14px 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    .btn-option {
+      background: #eff4ff;
+      color: var(--text);
+      border: 1px solid #d2def7;
+      text-align: left;
+    }
+
+    .btn-option:hover { background: #e5eeff; }
+
+    .btn-secondary {
+      background: #eef1f7;
+      color: var(--text);
+      border: 1px solid #d6ddea;
+    }
+
+    .results {
+      border-left: 4px solid var(--primary);
+      background: #f6f9ff;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+
+    .record-big {
+      font-size: 2rem;
+      font-weight: 800;
+      margin: 6px 0;
+      color: var(--text);
+    }
+
+    .small { font-size: 0.95rem; color: var(--muted); }
+
+    .decision-log {
+      margin: 12px 0 0;
+      padding-left: 18px;
+    }
+
+    .decision-log li { margin-bottom: 6px; color: var(--muted); }
+
+    .status-chip {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border: 1px solid #d8e0f0;
+      background: #eef3ff;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 650px) {
+      .wrap { padding: 10px; }
+      .card { padding: 16px; }
+      .record-big { font-size: 1.7rem; }
+      button { font-size: 0.98rem; }
+    }
+  </style>
 </head>
 <body>
-  <header class="site-header" role="banner">
-    <div class="brand">
-      <p class="kicker">Tomlinson psychology</p>
-      <h1>Cognitive Bias Arcade</h1>
-      <p class="sub">12 mini-games. 1200 max points. Learn how your mind makes fast calls.</p>
+  <div class="wrap">
+    <div class="hud">
+      <div class="hud-top">
+        <div class="badge" id="recordLabel">Record: 0-0</div>
+        <div class="badge" id="roundLabel">Round: 0/10</div>
+        <div class="badge" id="gamesLabel">Games: 0/100</div>
+      </div>
+      <div class="timeline" id="timeline"></div>
     </div>
-    <button id="resetBtn" class="btn btn-ghost" type="button" aria-label="Reset all saved progress">Reset Progress</button>
-  </header>
 
-  <section class="hud" aria-live="polite">
-    <div class="hud-item">
-      <span>Total Score</span>
-      <strong id="hudScore">0</strong>
-      <small>/1200</small>
-    </div>
-    <div class="hud-item">
-      <span>Games Completed</span>
-      <strong id="hudCompleted">0/12</strong>
-    </div>
-    <div class="hud-item">
-      <span>Mode</span>
-      <strong id="hudMode">Arcade Floor</strong>
-    </div>
-  </section>
+    <main class="card" id="app"></main>
+  </div>
 
-  <main id="app" tabindex="-1"></main>
+  <script>
+    // ======== SCENARIOS (edit here first) ========
+    const scenarios = [
+      {
+        id: 1,
+        title: "Training Camp Identity",
+        description: "Coach asks for direction. Build everything around veteran star Darius King, or spread touches to a balanced system?",
+        choices: [
+          {
+            label: "Build the offense around King",
+            outcomeText: "The fan base loves the clear identity. The locker room expects wins now.",
+            effect: (s) => {
+              s.teamStrength += 7;
+              s.chemistry -= 1;
+              s.morale += 4;
+              s.mediaPressure -= 4;
+              s.starReliance += 2;
+            }
+          },
+          {
+            label: "Balanced system with shared playmaking",
+            outcomeText: "Ball movement improves, but some veterans complain about reduced status.",
+            effect: (s) => {
+              s.teamStrength += 3;
+              s.chemistry += 4;
+              s.morale += 1;
+              s.mediaPressure += 2;
+              s.starReliance -= 1;
+            }
+          },
+          {
+            label: "Focus on defense and youth reps",
+            outcomeText: "Development staff approves, but it looks cautious to the press.",
+            effect: (s) => {
+              s.teamStrength += 1;
+              s.chemistry += 3;
+              s.futureAssets += 4;
+              s.capFlexibility += 2;
+              s.mediaPressure += 3;
+              s.starReliance -= 1;
+            }
+          }
+        ]
+      },
+      {
+        id: 2,
+        title: "Hot Start, Big Decision",
+        description: "King opens the season on fire. Ownership asks if you should double down while his name is loud.",
+        choices: [
+          {
+            label: "Promise a 2-year extension framework now",
+            outcomeText: "Agents and fans celebrate loyalty. Future flexibility tightens.",
+            effect: (s) => {
+              s.teamStrength += 5;
+              s.morale += 4;
+              s.mediaPressure -= 3;
+              s.capFlexibility -= 7;
+              s.starReliance += 2;
+            }
+          },
+          {
+            label: "Trade two seconds for a veteran shooter to support him",
+            outcomeText: "Spacing helps immediately, but your future cupboard gets lighter.",
+            effect: (s) => {
+              s.teamStrength += 4;
+              s.chemistry += 1;
+              s.futureAssets -= 5;
+              s.capFlexibility -= 2;
+              s.starReliance += 1;
+            }
+          },
+          {
+            label: "Stay flexible and evaluate for 20 more games",
+            outcomeText: "You avoid overreacting, though talk radio calls it indecisive.",
+            effect: (s) => {
+              s.teamStrength += 1;
+              s.capFlexibility += 5;
+              s.futureAssets += 2;
+              s.mediaPressure += 3;
+            }
+          }
+        ]
+      },
+      {
+        id: 3,
+        title: "Lowball Trade Offer",
+        description: "Another GM offers a modest package for King. The quote around the league: 'You can't trade a max star for pennies.'",
+        choices: [
+          {
+            label: "Reject it immediately; we already paid him too much to sell low",
+            outcomeText: "You keep face publicly, and season-ticket calls calm down.",
+            effect: (s) => {
+              s.teamStrength += 3;
+              s.morale += 2;
+              s.mediaPressure -= 4;
+              s.starReliance += 2;
+            }
+          },
+          {
+            label: "Counter with protections and keep talking",
+            outcomeText: "No deal today, but you create optionality.",
+            effect: (s) => {
+              s.capFlexibility += 4;
+              s.futureAssets += 2;
+              s.mediaPressure += 1;
+              s.teamStrength += 1;
+              s.starReliance -= 1;
+            }
+          },
+          {
+            label: "Accept the lowball and move on now",
+            outcomeText: "Immediate backlash is loud. Internally, your cap sheet breathes.",
+            effect: (s) => {
+              s.starStatus = "traded";
+              s.teamStrength -= 5;
+              s.capFlexibility += 12;
+              s.futureAssets += 10;
+              s.morale -= 3;
+              s.mediaPressure += 8;
+              s.starReliance = 0;
+            }
+          }
+        ]
+      },
+      {
+        id: 4,
+        title: "Minor Hamstring Strain",
+        description: "Medical staff recommends caution. Your staff reminds you: 'If we sit him, we may drop games right now.'",
+        choices: [
+          {
+            label: "Play him through it; we need momentum",
+            outcomeText: "Short-term production holds, but the risk profile rises.",
+            effect: (s) => {
+              s.teamStrength += 3;
+              s.morale += 1;
+              s.starDeclineLevel += 2;
+              s.mediaPressure -= 2;
+            }
+          },
+          {
+            label: "Strict minutes limit and recovery plan",
+            outcomeText: "Some fans boo load management, but training staff is relieved.",
+            effect: (s) => {
+              s.teamStrength -= 1;
+              s.chemistry += 2;
+              s.morale -= 1;
+              s.starDeclineLevel -= 1;
+              s.mediaPressure += 2;
+            }
+          },
+          {
+            label: "Shut him down for this block and test bench units",
+            outcomeText: "You likely eat short-term losses while evaluating alternatives.",
+            effect: (s) => {
+              s.starStatus = s.starStatus === "active" ? "benched" : s.starStatus;
+              s.teamStrength -= 3;
+              s.futureAssets += 4;
+              s.chemistry += 3;
+              s.mediaPressure += 4;
+              s.starReliance -= 2;
+            }
+          }
+        ]
+      },
+      {
+        id: 5,
+        title: "Analytics Report: Decline",
+        description: "Internal models show efficiency and defensive impact dropping. Coach wants to reduce King's role.",
+        choices: [
+          {
+            label: "Keep him as the unquestioned first option",
+            outcomeText: "The old hierarchy stays intact, but younger players disengage.",
+            effect: (s) => {
+              s.teamStrength += 1;
+              s.chemistry -= 4;
+              s.morale += 1;
+              s.mediaPressure -= 2;
+              s.starReliance += 2;
+            }
+          },
+          {
+            label: "Reduce him to a co-star role",
+            outcomeText: "There is some friction, but game flow improves.",
+            effect: (s) => {
+              s.teamStrength += 2;
+              s.chemistry += 3;
+              s.morale -= 1;
+              s.starDeclineLevel -= 1;
+              s.starReliance -= 2;
+            }
+          },
+          {
+            label: "Bench him for now and elevate younger lineups",
+            outcomeText: "Talk shows erupt, but internal accountability improves.",
+            effect: (s) => {
+              if (s.starStatus === "active") s.starStatus = "benched";
+              s.teamStrength -= 2;
+              s.chemistry += 5;
+              s.futureAssets += 5;
+              s.capFlexibility += 3;
+              s.mediaPressure += 6;
+              s.starReliance = Math.max(0, s.starReliance - 3);
+            }
+          }
+        ]
+      },
+      {
+        id: 6,
+        title: "Trade Deadline Pressure",
+        description: "A rebuilding team offers young wings and a first-round pick, but only if you attach one of your picks with King. 'It hurts, but resets the timeline.'",
+        choices: [
+          {
+            label: "No chance. Fans will revolt if we dump him now",
+            outcomeText: "Publicly, loyalty plays well. Long-term options narrow.",
+            effect: (s) => {
+              s.teamStrength += 2;
+              s.morale += 2;
+              s.mediaPressure -= 3;
+              s.capFlexibility -= 3;
+              s.starReliance += 2;
+            }
+          },
+          {
+            label: "Take the deal: attach a pick, get younger pieces",
+            outcomeText: "The move is unpopular today, but your roster timeline gets cleaner.",
+            effect: (s) => {
+              s.starStatus = "traded";
+              s.teamStrength += 1;
+              s.futureAssets += 8;
+              s.capFlexibility += 8;
+              s.mediaPressure += 5;
+              s.morale -= 2;
+              s.starReliance = 0;
+            }
+          },
+          {
+            label: "Hold him but trade bench depth to chase this year",
+            outcomeText: "Rotation tightens now, and depth risk grows later.",
+            effect: (s) => {
+              s.teamStrength += 3;
+              s.chemistry -= 2;
+              s.futureAssets -= 6;
+              s.capFlexibility -= 4;
+              s.starReliance += 1;
+            }
+          }
+        ]
+      },
+      {
+        id: 7,
+        title: "Locker Room Conflict",
+        description: "King demands more touches and says the organization promised loyalty. Two young players quietly ask for clearer roles.",
+        choices: [
+          {
+            label: "Appease him: restore top usage and public support",
+            outcomeText: "The headline cycle cools, but role tension deepens.",
+            effect: (s) => {
+              if (s.starStatus === "benched") s.starStatus = "active";
+              s.teamStrength += 2;
+              s.chemistry -= 5;
+              s.morale += 1;
+              s.mediaPressure -= 3;
+              s.starReliance += 2;
+            }
+          },
+          {
+            label: "Set role standards: touches earned, not promised",
+            outcomeText: "Short-term discomfort, better accountability culture.",
+            effect: (s) => {
+              s.teamStrength += 1;
+              s.chemistry += 4;
+              s.morale -= 1;
+              s.futureAssets += 3;
+              s.mediaPressure += 2;
+              s.starReliance -= 2;
+            }
+          },
+          {
+            label: "Quietly explore buyout/trade exits",
+            outcomeText: "External noise grows, but front office optionality improves.",
+            effect: (s) => {
+              s.capFlexibility += 5;
+              s.futureAssets += 4;
+              s.morale -= 2;
+              s.mediaPressure += 4;
+              s.starDeclineLevel += 1;
+              s.starReliance = Math.max(0, s.starReliance - 2);
+            }
+          }
+        ]
+      },
+      {
+        id: 8,
+        title: "Late-Season Crisis",
+        description: "King suffers a major setback and his off-court comments trigger backlash. You have one day before guarantees lock.",
+        choices: [
+          {
+            label: "Keep him active and ride through criticism",
+            outcomeText: "You avoid admitting failure, but on-court fit worsens.",
+            effect: (s) => {
+              s.starStatus = "active";
+              s.teamStrength -= 5;
+              s.chemistry -= 3;
+              s.morale -= 2;
+              s.mediaPressure -= 1;
+              s.starDeclineLevel += 3;
+              s.starReliance += 1;
+            }
+          },
+          {
+            label: "Bench indefinitely and shift to depth lineups",
+            outcomeText: "Public debate intensifies, while your rotation becomes steadier.",
+            effect: (s) => {
+              s.starStatus = "benched";
+              s.teamStrength += 1;
+              s.chemistry += 4;
+              s.capFlexibility += 2;
+              s.mediaPressure += 5;
+              s.starReliance = 0;
+            }
+          },
+          {
+            label: "Waive-and-stretch now to clear the path",
+            outcomeText: "Ownership absorbs the hit; roster logic gets clearer.",
+            effect: (s) => {
+              s.starStatus = "waived";
+              s.teamStrength += 2;
+              s.chemistry += 3;
+              s.capFlexibility += 6;
+              s.morale -= 1;
+              s.mediaPressure += 6;
+              s.starReliance = 0;
+            }
+          }
+        ]
+      },
+      {
+        id: 9,
+        title: "Cap Window Opens",
+        description: "A cap expert says waiving/buying out remaining money now could let you sign two high-motor role players before the final stretch.",
+        choices: [
+          {
+            label: "Keep current structure; no dead money",
+            outcomeText: "You avoid the optics of paying for no production.",
+            effect: (s) => {
+              s.teamStrength += 0;
+              s.capFlexibility -= 2;
+              s.morale += 1;
+              s.mediaPressure -= 1;
+            }
+          },
+          {
+            label: "Eat dead cap, sign depth and defenders",
+            outcomeText: "Rotation quality rises even though payroll efficiency looks ugly.",
+            effect: (s) => {
+              s.teamStrength += 5;
+              s.chemistry += 2;
+              s.capFlexibility += 3;
+              s.futureAssets += 2;
+              s.mediaPressure += 2;
+            }
+          },
+          {
+            label: "Split difference: one veteran signing only",
+            outcomeText: "You add help without fully committing to a reset.",
+            effect: (s) => {
+              s.teamStrength += 2;
+              s.chemistry += 1;
+              s.capFlexibility += 1;
+              s.mediaPressure += 1;
+            }
+          }
+        ]
+      },
+      {
+        id: 10,
+        title: "Final Push",
+        description: "Last 10 games. Ownership asks for either a 'loyalty run' storyline or a strict future-first model to close the year.",
+        choices: [
+          {
+            label: "Loyalty run: feature King one last time",
+            outcomeText: "The story resonates, but possessions become predictable.",
+            effect: (s) => {
+              if (s.starStatus !== "traded" && s.starStatus !== "waived") {
+                s.starStatus = "active";
+              }
+              s.teamStrength -= 2;
+              s.chemistry -= 2;
+              s.morale += 2;
+              s.mediaPressure -= 2;
+              s.starReliance += 2;
+            }
+          },
+          {
+            label: "Future-first: play optimized lineups regardless of salary",
+            outcomeText: "Some backlash remains, but competitive coherence improves.",
+            effect: (s) => {
+              if (s.starStatus === "active") s.starStatus = "benched";
+              s.teamStrength += 4;
+              s.chemistry += 4;
+              s.futureAssets += 3;
+              s.morale -= 1;
+              s.mediaPressure += 2;
+              s.starReliance = 0;
+            }
+          },
+          {
+            label: "Hybrid approach with strict minute caps",
+            outcomeText: "You manage optics and development, with mixed tactical gains.",
+            effect: (s) => {
+              s.teamStrength += 1;
+              s.chemistry += 2;
+              s.morale += 0;
+              s.mediaPressure += 0;
+              s.starReliance = Math.max(0, s.starReliance - 1);
+            }
+          }
+        ]
+      }
+    ];
 
-  <script src="assets/app.js"></script>
+    const app = document.getElementById("app");
+    const recordLabel = document.getElementById("recordLabel");
+    const roundLabel = document.getElementById("roundLabel");
+    const gamesLabel = document.getElementById("gamesLabel");
+    const timelineEl = document.getElementById("timeline");
+
+    function createInitialState() {
+      return {
+        phase: "intro",
+        currentRound: 0,
+        wins: 0,
+        losses: 0,
+        decisions: [],
+        lastResult: null,
+
+        // Hidden attributes
+        teamStrength: 55,
+        chemistry: 50,
+        morale: 52,
+        capFlexibility: 38,
+        futureAssets: 42,
+        mediaPressure: 48,
+        starStatus: "active", // active, benched, traded, waived
+        starDeclineLevel: 0,
+        starReliance: 3
+      };
+    }
+
+    let gameState = createInitialState();
+
+    function clamp(n, min, max) {
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function normalizeState(s) {
+      s.teamStrength = clamp(s.teamStrength, 20, 85);
+      s.chemistry = clamp(s.chemistry, 15, 90);
+      s.morale = clamp(s.morale, 15, 90);
+      s.capFlexibility = clamp(s.capFlexibility, 10, 95);
+      s.futureAssets = clamp(s.futureAssets, 10, 95);
+      s.mediaPressure = clamp(s.mediaPressure, 5, 95);
+      s.starDeclineLevel = clamp(s.starDeclineLevel, 0, 15);
+      s.starReliance = clamp(s.starReliance, 0, 8);
+    }
+
+    function buildTimeline() {
+      timelineEl.innerHTML = "";
+      for (let i = 1; i <= 10; i++) {
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        if (i <= gameState.currentRound) dot.classList.add("done");
+        else if (i === gameState.currentRound + 1 && gameState.phase !== "intro" && gameState.phase !== "end") dot.classList.add("current");
+        timelineEl.appendChild(dot);
+      }
+    }
+
+    function updateHud() {
+      recordLabel.textContent = `Record: ${gameState.wins}-${gameState.losses}`;
+      roundLabel.textContent = `Round: ${gameState.currentRound}/10`;
+      gamesLabel.textContent = `Games: ${gameState.wins + gameState.losses}/100`;
+      buildTimeline();
+    }
+
+    function getStarImpact(s) {
+      if (s.starStatus === "traded" || s.starStatus === "waived") return 0;
+      let base = 12 - (s.starDeclineLevel * 2.4);
+      if (s.starStatus === "benched") base *= 0.2;
+      return base - (s.starReliance * 0.8);
+    }
+
+    function applyTimeDecay(roundNumber) {
+      if (gameState.starStatus === "active") {
+        if (roundNumber <= 3) gameState.starDeclineLevel += 0.6;
+        else if (roundNumber <= 7) gameState.starDeclineLevel += 1.4;
+        else gameState.starDeclineLevel += 2.1;
+      } else if (gameState.starStatus === "benched") {
+        gameState.starDeclineLevel += 0.4;
+      }
+
+      if (roundNumber >= 6 && Math.random() < 0.38 && gameState.starStatus === "active") {
+        gameState.starDeclineLevel += 1.4;
+      }
+
+      if (roundNumber >= 5 && gameState.starStatus === "active" && gameState.starReliance >= 4) {
+        gameState.chemistry -= 1;
+      }
+    }
+
+    function computeWinProbability(roundNumber) {
+      const starImpact = getStarImpact(gameState);
+
+      let score = 48;
+      score += (gameState.teamStrength - 50) * 0.78;
+      score += (gameState.chemistry - 50) * 0.42;
+      score += (gameState.morale - 50) * 0.35;
+      score += (gameState.capFlexibility - 50) * 0.18;
+      score += (gameState.futureAssets - 50) * 0.16;
+      score -= (gameState.mediaPressure - 50) * 0.3;
+      score += starImpact;
+
+      // Arc shaping: star is rewarded early, penalized late.
+      if (roundNumber <= 3) {
+        if (gameState.starStatus === "active") score += 4.5;
+        if (gameState.starStatus === "traded" || gameState.starStatus === "waived") score -= 4.8;
+      }
+
+      if (roundNumber >= 8) {
+        if (gameState.starStatus === "active") score -= 7;
+        if (gameState.starStatus === "benched" || gameState.starStatus === "traded" || gameState.starStatus === "waived") score += 3.4;
+      }
+
+      const randomNoise = (Math.random() - 0.5) * 4;
+      const probability = clamp((score + randomNoise) / 100, 0.15, 0.85);
+      return probability;
+    }
+
+    function simulateTenGames(roundNumber) {
+      applyTimeDecay(roundNumber);
+      normalizeState(gameState);
+      const winProbability = computeWinProbability(roundNumber);
+
+      let wins = 0;
+      for (let i = 0; i < 10; i++) {
+        if (Math.random() < winProbability) wins++;
+      }
+
+      const losses = 10 - wins;
+      gameState.wins += wins;
+      gameState.losses += losses;
+
+      return {
+        wins,
+        losses,
+        winProbability,
+        note: generatePerformanceNote(wins, gameState.starStatus)
+      };
+    }
+
+    function generatePerformanceNote(blockWins, status) {
+      if (blockWins >= 8) return "Strong stretch. Rotation clarity and late-game execution carried you.";
+      if (blockWins >= 6) return "Solid run. You banked enough wins to stay on pace.";
+      if (blockWins >= 4) {
+        if (status === "active") return "Mixed results. The top-heavy approach produced uneven possessions.";
+        return "Mixed results. Lineup changes showed promise but lacked consistency.";
+      }
+      return "Tough block. Opponents targeted your weak spots and exposed depth issues.";
+    }
+
+    function gmEvaluationText() {
+      const winPct = gameState.wins / 100;
+      if (winPct >= 0.68) return "Executive of the Year buzz. You made difficult choices and protected long-run value.";
+      if (winPct >= 0.56) return "Strong season. You balanced pressure, performance, and future planning better than most.";
+      if (winPct >= 0.45) return "Competitive but inconsistent. A few emotional decisions cost you extra wins.";
+      return "Disappointing finish. You chased short-term optics too often and fell behind.";
+    }
+
+    function sunkCostReflection() {
+      const movedOnRounds = gameState.decisions
+        .filter((d) => /trade|waive|bench|future-first|reduced role|younger/i.test(d.choiceLabel))
+        .map((d) => d.round);
+
+      if (movedOnRounds.length >= 3) {
+        return "You repeatedly chose expected future value over past spending. Those choices usually improve outcomes when decline becomes clear.";
+      }
+      if (movedOnRounds.length >= 1) {
+        return "You showed some willingness to pivot, but several late choices still prioritized money already spent over likely future production.";
+      }
+      return "Most decisions protected past investment, even when new evidence changed. That pattern reflects the sunk cost fallacy.";
+    }
+
+    function renderIntro() {
+      app.innerHTML = `
+        <h1 class="title">Franchise GM: 100-Game Challenge</h1>
+        <p>You are the new General Manager of the Harbor City Tritons. Ownership wants wins now, but your roster is built around one aging star.</p>
+        <div class="contract-box">
+          <h3>Darius King Contract Snapshot</h3>
+          <p><strong>4 years remaining</strong> at <strong>$48M/year guaranteed</strong></p>
+          <p><strong>Limited no-trade clause</strong> and heavy fan expectations</p>
+          <p class="small">You will make 10 decisions. After each one, the next 10 games are simulated.</p>
+        </div>
+        <p><strong>Goal:</strong> finish with the best record after exactly 100 games.</p>
+        <div class="btn-row">
+          <button class="btn-primary" id="startBtn">Start Season</button>
+        </div>
+      `;
+
+      document.getElementById("startBtn").addEventListener("click", () => {
+        gameState.phase = "decision";
+        render();
+      });
+    }
+
+    function renderDecision() {
+      const scenario = scenarios[gameState.currentRound];
+      const choiceButtons = scenario.choices
+        .map((choice, idx) => `<button class="btn-option" data-idx="${idx}">${choice.label}</button>`)
+        .join("");
+
+      app.innerHTML = `
+        <h2 class="title">Round ${scenario.id}: ${scenario.title}</h2>
+        <p>${scenario.description}</p>
+        <div class="status-chip">Star Status: ${gameState.starStatus.toUpperCase()}</div>
+        <div class="btn-row" id="choiceWrap">${choiceButtons}</div>
+      `;
+
+      document.getElementById("choiceWrap").addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-idx]");
+        if (!btn) return;
+        const choice = scenario.choices[Number(btn.dataset.idx)];
+        handleChoice(choice, scenario);
+      });
+    }
+
+    function handleChoice(choice, scenario) {
+      choice.effect(gameState);
+      normalizeState(gameState);
+
+      const blockResult = simulateTenGames(scenario.id);
+
+      gameState.lastResult = {
+        title: scenario.title,
+        choiceLabel: choice.label,
+        outcomeText: choice.outcomeText,
+        blockWins: blockResult.wins,
+        blockLosses: blockResult.losses,
+        note: blockResult.note
+      };
+
+      gameState.decisions.push({
+        round: scenario.id,
+        scenarioTitle: scenario.title,
+        choiceLabel: choice.label,
+        blockRecord: `${blockResult.wins}-${blockResult.losses}`
+      });
+
+      gameState.currentRound += 1;
+      gameState.phase = "roundResult";
+      render();
+    }
+
+    function renderRoundResult() {
+      const r = gameState.lastResult;
+      const done = gameState.currentRound >= 10;
+
+      app.innerHTML = `
+        <h2 class="title">Round ${gameState.currentRound} Results</h2>
+        <p><strong>Decision:</strong> ${r.choiceLabel}</p>
+        <div class="results">
+          <p>${r.outcomeText}</p>
+          <p><strong>This 10-game block:</strong> ${r.blockWins}-${r.blockLosses}</p>
+          <p>${r.note}</p>
+        </div>
+        <p class="small">Current season record: <strong>${gameState.wins}-${gameState.losses}</strong></p>
+        <div class="btn-row">
+          <button class="btn-primary" id="nextBtn">${done ? "View Final Evaluation" : "Continue to Next Round"}</button>
+        </div>
+      `;
+
+      document.getElementById("nextBtn").addEventListener("click", () => {
+        gameState.phase = gameState.currentRound >= 10 ? "end" : "decision";
+        render();
+      });
+    }
+
+    function makeCopyText() {
+      const decisionLines = gameState.decisions
+        .map((d) => `R${d.round}: ${d.choiceLabel} (Block ${d.blockRecord})`)
+        .join("\n");
+
+      return [
+        "GM Season Simulator Results",
+        `Final Record: ${gameState.wins}-${gameState.losses}`,
+        "Key Decisions:",
+        decisionLines
+      ].join("\n");
+    }
+
+    async function copyResults() {
+      const text = makeCopyText();
+      try {
+        await navigator.clipboard.writeText(text);
+        alert("Results copied to clipboard.");
+      } catch (_) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        alert("Results copied to clipboard.");
+      }
+    }
+
+    function renderEnd() {
+      const bestStreak = gameState.decisions
+        .slice()
+        .sort((a, b) => {
+          const [aw] = a.blockRecord.split("-").map(Number);
+          const [bw] = b.blockRecord.split("-").map(Number);
+          return bw - aw;
+        })[0];
+
+      app.innerHTML = `
+        <h2 class="title">Season Complete</h2>
+        <p class="record-big">Final Record: ${gameState.wins}-${gameState.losses}</p>
+        <p><strong>GM Evaluation:</strong> ${gmEvaluationText()}</p>
+        <p><strong>Best 10-game block:</strong> Round ${bestStreak.round} (${bestStreak.blockRecord})</p>
+        <div class="results">
+          <p><strong>Psychology Debrief:</strong> ${sunkCostReflection()}</p>
+          <p class="small">In this simulation, teams often improve once they stop letting past cost dictate current decisions. That pattern is the <strong>sunk cost fallacy</strong>.</p>
+        </div>
+        <h3>Decision Log</h3>
+        <ol class="decision-log">
+          ${gameState.decisions.map((d) => `<li><strong>Round ${d.round}:</strong> ${d.choiceLabel} <span class="small">(${d.blockRecord})</span></li>`).join("")}
+        </ol>
+        <div class="btn-row">
+          <button class="btn-primary" id="restartBtn">Play Again</button>
+          <button class="btn-secondary" id="copyBtn">Copy Results</button>
+        </div>
+      `;
+
+      document.getElementById("restartBtn").addEventListener("click", () => {
+        gameState = createInitialState();
+        render();
+      });
+
+      document.getElementById("copyBtn").addEventListener("click", copyResults);
+    }
+
+    function render() {
+      updateHud();
+      if (gameState.phase === "intro") renderIntro();
+      else if (gameState.phase === "decision") renderDecision();
+      else if (gameState.phase === "roundResult") renderRoundResult();
+      else renderEnd();
+    }
+
+    window.render_game_to_text = () => JSON.stringify({
+      phase: gameState.phase,
+      round: gameState.currentRound,
+      record: { wins: gameState.wins, losses: gameState.losses },
+      starStatus: gameState.starStatus,
+      starDeclineLevel: Number(gameState.starDeclineLevel.toFixed(2)),
+      latestDecision: gameState.decisions[gameState.decisions.length - 1] || null
+    });
+
+    // No frame loop in this text game; expose deterministic hook for test tooling.
+    window.advanceTime = () => {};
+
+    render();
+  </script>
 </body>
 </html>
